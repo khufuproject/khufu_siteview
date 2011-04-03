@@ -1,0 +1,15 @@
+<html>
+  <head>
+    <style type="text/css">
+      
+    </style>
+  </head>
+  <body>
+    <h1>Contents of: {{ path }}</h1>
+    <ul>
+    {% for item in items -%}
+      <li><a href="{{item.link}}">{{item.label}}</a></li>
+    {%- endfor %}
+    </ul>
+  </body>
+</html>
