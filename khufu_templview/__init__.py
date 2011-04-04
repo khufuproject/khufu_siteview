@@ -5,9 +5,42 @@ from pyramid.asset import abspath_from_asset_spec
 from pyramid.renderers import render_to_response, RendererHelper
 from pyramid.path import caller_package
 from pyramid.httpexceptions import HTTPNotFound
+import re
 import logging
 
 logger = logging.getLogger('khufu_templview')
+
+excludes = [
+    re.compile('^[.].*$'),
+    re.compile('~$'),
+    ]
+
+
+def is_valid_file(v):
+    for x in excludes:
+        if x.search(v):
+            logger.debug('Skipping "%s"' % v)
+            return False
+    return True
+
+
+def listdir(path):
+    return filter(is_valid_file, os.listdir(path))
+
+
+class Curry(object):
+
+    def __init__(self, callback, *cb_args, **cb_kwargs):
+        self.callback = callback
+        self.cb_args = cb_args
+        self.cb_kwargs = cb_kwargs
+
+    def __call__(self, *args, **kwargs):
+        args = self.cb_args + args
+        temp = dict(self.cb_kwargs)
+        temp.update(kwargs)
+        kwargs = temp
+        return self.callback(*args, **kwargs)
 
 
 class TemplateDirView(object):
@@ -25,12 +58,13 @@ class TemplateDirView(object):
 
         self.assetspec = assetspec
 
-        self.basepath = abspath_from_asset_spec(assetspec, package)
+        self.basepath = os.path.abspath(abspath_from_asset_spec(assetspec))
         if not os.path.isdir(self.basepath):
-            raise ValueError('%s <-> %s does not exist as a directory')
+            raise ValueError('%s <-> %s does not exist as a directory'
+                             % (assetspec, self.basepath))
 
     def _diritem_iter(self, path):
-        for x in os.listdir(path):
+        for x in listdir(path):
             yield {'label': x, 'link': x}
 
     def render_listing(self, request, path):
@@ -43,9 +77,9 @@ class TemplateDirView(object):
             )
 
     def find_index(self, path):
-        for x in os.listdir(path):
+        for x in listdir(path):
             if x.startswith('index.'):
-                return x
+                return os.path.join(path, x)
         return None
 
     def get_handler(self, asset, request):
@@ -62,29 +96,38 @@ class TemplateDirView(object):
         return res
 
     def _build_handler(self, asset, request):
-        path = abspath_from_asset_spec(asset)
+        path = os.path.abspath(abspath_from_asset_spec(asset))
+        if not path.startswith(self.basepath):
+            # make sure url scheme wasn't tricked into going into parent dirs
+            return Curry(HTTPNotFound,
+                         comment=request.url[len(request.application_url):])
         if os.path.isdir(path):
             index = self.find_index(path)
             if index:
-                return lambda request, index=index: render_to_response(index, {}, request)
-            return lambda request, path=path: self.render_listing(request, path)
+                logger.debug('serving default index file: ' + index)
+                return Curry(render_to_response, renderer_name=index, value={})
+            return Curry(self.render_listing, path=path)
         if os.path.isfile(path):
             helper = RendererHelper(name=asset, registry=request.registry)
             try:
                 if helper.renderer is not None:
-                    return lambda request, helper=helper: helper.render_to_response({}, None, request=request)
+                    return Curry(helper.render_to_response, value={},
+                                 system_values={})
             except ValueError:
                 pass
 
+            def serve_file(request, application):
+                return request.get_response(application)
             fileapp = FileApp(filename=path)
-            return lambda request, fileapp=fileapp: request.get_response(fileapp)
+            return Curry(serve_file, application=fileapp)
 
-        return lambda request: HTTPNotFound(comment=request.url[len(request.application_url):])
+        return Curry(HTTPNotFound,
+                     comment=request.url[len(request.application_url):])
 
     def __call__(self, request):
         assetpath = self.assetspec + '/'.join(request.subpath)
         handler = self.get_handler(assetpath, request)
-        return handler(request)
+        return handler(request=request)
 
 
 def add_templateview_route(config, assetspec, path):

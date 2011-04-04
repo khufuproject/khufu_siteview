@@ -6,6 +6,10 @@ README = open(os.path.join(here, 'README.rst')).read()
 CHANGES = open(os.path.join(here, 'CHANGES.rst')).read()
 
 requires = [
+    'setuptools',
+    'pyramid',
+    'pyramid_jinja2',
+    'Paste',
     ]
 
 setup(name='khufu_templview',
