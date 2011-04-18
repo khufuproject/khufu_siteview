@@ -13,7 +13,7 @@ requires = [
     ]
 
 setup(name='khufu_siteview',
-      version='0.1',
+      version='0.9',
       description='Easy template-to-view support',
       long_description=README + '\n\n' + CHANGES,
       classifiers=[
