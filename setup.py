@@ -12,7 +12,7 @@ requires = [
     'Paste',
     ]
 
-setup(name='khufu_templview',
+setup(name='khufu_siteview',
       version='0.1',
       description='Easy template-to-view support',
       long_description=README + '\n\n' + CHANGES,
@@ -24,11 +24,12 @@ setup(name='khufu_templview',
       license='BSD',
       author='Rocky Burt',
       author_email='rocky@serverzen.com',
-      url='https://github.com/serverzen/khufu_templview',
+      url='https://github.com/khufuproject/khufu_siteview',
       keywords='pyramid khufu',
       packages=find_packages(),
       include_package_data=True,
       zip_safe=False,
       install_requires=requires,
-      test_suite="khufu_templview.tests",
+      tests_require=requires,
+      test_suite="khufu_siteview.tests",
       )
