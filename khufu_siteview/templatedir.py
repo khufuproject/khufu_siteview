@@ -119,7 +119,7 @@ class TemplateDirView(object):
             try:
                 if helper.renderer is not None:
                     return Curry(helper.render_to_response, value={},
-                                 system_values={})
+                                 system_values=None)
             except ValueError:
                 pass
 
