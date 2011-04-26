@@ -1,8 +1,8 @@
 Changes
 =======
 
-0.9.1 - unreleased
-------------------
+0.9.1 - Apr 26, 2011
+--------------------
 
   * fixed bug where standard global renderer vars were being removed
 
